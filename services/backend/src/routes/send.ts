@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { customAlphabet } from 'nanoid';
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 21);
-import { apiKeys, db, emailLogs, templates } from '../db.js';
+import { db, emailLogs, templates } from '../db.js';
 import { sendEmail } from '../services/cloudflare.js';
 import { sendEmailViaSmtp } from '../services/smtp.js';
 import { renderLayout } from '../emails/render.js';
@@ -148,19 +148,13 @@ app.post('/', zValidator('json', sendSchema), async (c) => {
     }
   }
 
-  // ── Update key usage stats without breaking successful sends ───────────────
+  // ── Update key usage stats (atomic increment to avoid race condition) ────────
   if (successCount > 0) {
     try {
-      const keyRow = await apiKeys.findOne({ where: { id: apiKey.keyId } });
-      if (keyRow) {
-        await apiKeys.update({
-          where: { id: apiKey.keyId },
-          set: {
-            last_used_at: now,
-            send_count: Number(keyRow.send_count ?? 0) + successCount,
-          },
-        });
-      }
+      await db.query(
+        'UPDATE api_keys SET last_used_at = ?, send_count = send_count + ? WHERE id = ?',
+        [now, successCount, apiKey.keyId],
+      );
     } catch (err) {
       // A stats write failure should not turn a completed send into a 500.
       console.error('[send] failed to update api key usage stats', err);

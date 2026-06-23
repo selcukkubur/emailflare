@@ -53,6 +53,15 @@ app.post('/', zValidator('json', createSchema), async (c) => {
     cfResult = allSubdomains.find(s => s.name === name) ?? await createSendingSubdomain(zoneId, name);
   } catch (error) {
     if (error instanceof CloudflareApiError) {
+      // A token-permission error must surface, not silently fall back to manual mode
+      // (otherwise a misconfigured token looks like a successful "manual" registration).
+      if (error.code === 10000 || error.code === 9109 || error.status === 401 || error.status === 403) {
+        return c.json({
+          error: 'Cloudflare token is missing permission for Email Sending Subdomains. Required: Account "Email Security: Edit"; Zone "Email Routing Rules: Edit"; Zone "Zone: Read"; Zone "DNS: Read/Write".',
+          cfCode: error.code,
+          cfPath: error.path,
+        }, 502);
+      }
       // Workaround mode: if the Email Sending subdomain API path itself fails,
       // allow manual domain registration so already-enabled UI subdomains can be used.
       if (error.path.includes('/email/sending/subdomains')) {
