@@ -151,7 +151,9 @@ app.post('/', zValidator('json', sendSchema), async (c) => {
   // ── Update key usage stats (atomic increment to avoid race condition) ────────
   if (successCount > 0) {
     try {
-      await db.query(
+      // db.exec (not db.query) — /query is read-only in @mesahub/client and rejects writes
+      // ("Use /exec instead"); db.exec hits /exec so the atomic increment actually lands.
+      await db.exec(
         'UPDATE api_keys SET last_used_at = ?, send_count = COALESCE(send_count, 0) + ? WHERE id = ?',
         [now, successCount, apiKey.keyId],
       );
