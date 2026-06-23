@@ -152,7 +152,7 @@ app.post('/', zValidator('json', sendSchema), async (c) => {
   if (successCount > 0) {
     try {
       await db.query(
-        'UPDATE api_keys SET last_used_at = ?, send_count = send_count + ? WHERE id = ?',
+        'UPDATE api_keys SET last_used_at = ?, send_count = COALESCE(send_count, 0) + ? WHERE id = ?',
         [now, successCount, apiKey.keyId],
       );
     } catch (err) {
