@@ -15,7 +15,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o /go/bin/mesahub-server ./cmd/server
 FROM node:22-alpine AS build-backend
 WORKDIR /app/backend
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 
 COPY services/backend/package.json services/backend/pnpm-lock.yaml services/backend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -27,7 +27,7 @@ RUN pnpm run build
 FROM node:22-alpine AS build-admin
 WORKDIR /app/admin
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10
 
 COPY services/admin/package.json services/admin/pnpm-lock.yaml services/admin/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -46,7 +46,6 @@ WORKDIR /app
 # mesahub-server (for embedded mode — skipped if MESAHUB_URL points to external)
 COPY --from=build-core /go/bin/mesahub-server /usr/local/bin/mesahub-server
 RUN mkdir -p /data
-VOLUME ["/data"]
 
 # Install Mailpit binary
 ARG TARGETARCH
