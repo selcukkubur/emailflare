@@ -166,9 +166,10 @@ export interface CFSendEmailResult {
 }
 
 export async function sendEmail(params: CFSendEmailParams): Promise<CFSendEmailResult> {
+  const { replyTo, ...body } = params;
   return cfFetch<CFSendEmailResult>(`/accounts/${env.CF_ACCOUNT_ID}/email/sending/send`, {
     method: 'POST',
-    body: JSON.stringify(params),
+    body: JSON.stringify({ ...body, ...(replyTo !== undefined ? { reply_to: replyTo } : {}) }),
   });
 }
 
